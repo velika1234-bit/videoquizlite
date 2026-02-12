@@ -41,7 +41,8 @@
             Youtube: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
             Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
             Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
-            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         };
 
         // --- УНИВЕРСАЛЕН МЕДИЯ ПЛЕЪР ---
@@ -108,6 +109,7 @@
             const [videoUrl, setVideoUrl] = useState('');
             const [questions, setQuestions] = useState([]);
             const [shareStatus, setShareStatus] = useState('');
+            const [isSharedMode, setIsSharedMode] = useState(false);
 
             useEffect(() => {
                 const hash = window.location.hash.substring(1);
@@ -116,6 +118,7 @@
                         const decodedData = JSON.parse(decodeURIComponent(escape(atob(hash))));
                         if (decodedData.videoUrl) setVideoUrl(decodedData.videoUrl);
                         if (decodedData.questions) setQuestions(decodedData.questions);
+                        setIsSharedMode(true); // Активираме "Споделен режим"
                     } catch (e) { console.error("Линкът е невалиден"); }
                 } else {
                     const savedVideo = localStorage.getItem('vq_videoUrl');
@@ -126,9 +129,12 @@
             }, []);
 
             useEffect(() => {
-                if (videoUrl) localStorage.setItem('vq_videoUrl', videoUrl);
-                localStorage.setItem('vq_questions', JSON.stringify(questions));
-            }, [videoUrl, questions]);
+                // Записваме в LocalStorage само ако НЕ сме в споделен режим (за да не презапишем тестовете на учителя)
+                if (!isSharedMode) {
+                    if (videoUrl) localStorage.setItem('vq_videoUrl', videoUrl);
+                    localStorage.setItem('vq_questions', JSON.stringify(questions));
+                }
+            }, [videoUrl, questions, isSharedMode]);
 
             const generateShareLink = () => {
                 const data = { videoUrl, questions };
@@ -140,6 +146,11 @@
                 });
             };
 
+            const resetApp = () => {
+                window.location.hash = '';
+                window.location.reload();
+            };
+
             return (
                 <div className="min-h-screen">
                     <nav className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
@@ -149,7 +160,14 @@
                         </div>
                         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
                             <button onClick={() => setView('student')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${view === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Решаване</button>
-                            <button onClick={() => setView('teacher')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${view === 'teacher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Дизайн</button>
+                            
+                            {!isSharedMode ? (
+                                <button onClick={() => setView('teacher')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${view === 'teacher' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Дизайн</button>
+                            ) : (
+                                <button onClick={resetApp} className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1" title="Изчисти линка и създай нов тест">
+                                    <Icons.Plus /> Нов
+                                </button>
+                            )}
                         </div>
                     </nav>
 
@@ -166,7 +184,7 @@
                                     <button onClick={() => password === 'admin' ? setIsAuthenticated(true) : alert('Грешна парола')} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">Влез в настройките</button>
                                 </div>
                             ) : (
-                                <TeacherDashboard questions={questions} setQuestions={setQuestions} videoUrl={videoUrl} setVideoUrl={setVideoUrl} onShare={generateShareLink} shareStatus={shareStatus} />
+                                <TeacherDashboard questions={questions} setQuestions={setQuestions} videoUrl={videoUrl} setVideoUrl={setVideoUrl} onShare={generateShareLink} shareStatus={shareStatus} isSharedMode={isSharedMode} resetApp={resetApp} />
                             )
                         )}
                     </main>
@@ -271,45 +289,35 @@
             );
         };
 
-        const TeacherDashboard = ({ questions, setQuestions, videoUrl, setVideoUrl, onShare, shareStatus }) => {
+        const TeacherDashboard = ({ questions, setQuestions, videoUrl, setVideoUrl, onShare, shareStatus, isSharedMode, resetApp }) => {
             const playerRef = useRef(null);
             const [newQ, setNewQ] = useState({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
             const [editingId, setEditingId] = useState(null);
             
             const isYouTube = getYouTubeId(videoUrl);
 
-            // Обработка на редакция на въпрос
             const handleEdit = (q) => {
-                setNewQ({ ...q }); // Копираме данните на въпроса във формата
-                setEditingId(q.id); // Задаваме ID-то на въпроса, който редактираме
-                // Скрол до формата (опционално, но полезно)
+                setNewQ({ ...q }); 
+                setEditingId(q.id); 
                 window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             };
 
-            // Запазване на въпрос (нов или редактиран)
             const handleSaveQuestion = () => {
                 if (!newQ.text) return;
-
                 if (editingId) {
-                    // Обновяване на съществуващ въпрос
                     setQuestions(questions.map(q => q.id === editingId ? { ...newQ, id: editingId } : q));
                     setEditingId(null);
                 } else {
-                    // Добавяне на нов въпрос
                     setQuestions([...questions, { ...newQ, id: Date.now() }]);
                 }
-                
-                // Изчистване на формата
                 setNewQ({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
             };
 
-            // Отказ от редакция
             const handleCancelEdit = () => {
                 setEditingId(null);
                 setNewQ({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
             };
 
-            // Изчистване на целия тест (Нов тест)
             const handleClearAll = () => {
                 if (confirm('Сигурни ли сте? Това ще изтрие текущото видео и всички въпроси.')) {
                     setVideoUrl('');
@@ -325,7 +333,6 @@
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
                     <div className="lg:col-span-8 space-y-6">
                         <div className="bg-white p-6 rounded-3xl border shadow-sm relative">
-                            {/* Бутон за Нов Тест */}
                              <button 
                                 onClick={handleClearAll}
                                 className="absolute top-6 right-6 flex items-center gap-2 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors"
