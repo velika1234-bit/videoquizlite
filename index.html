@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>VideoQuiz Lite +</title>
+    <!-- React -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Компресия -->
     <script src="https://unpkg.com/lz-string@1.4.4/libs/lz-string.min.js"></script>
+    <!-- QR код генератор (офлайн) -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Шрифт -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
@@ -27,7 +33,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useImperativeHandle, forwardRef } = React;
 
-        // --- ПОМОЩНИ ФУНКЦИИ ---
+        // ---------- ПОМОЩНИ ФУНКЦИИ ----------
         const getYouTubeId = (url) => {
             if (!url) return null;
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -35,28 +41,42 @@
             return (match && match[2].length === 11) ? match[2] : null;
         };
 
-        // --- ИКОНИ ---
+        // ---------- ИКОНИ (само най-използваните) ----------
         const Icons = {
-            Video: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>,
-            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
-            Share: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>,
-            Check: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"/></svg>,
-            Alert: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
-            Clock: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-            Youtube: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
-            Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
-            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
-            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
-            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
-            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
-            Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
-            Move: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="19 9 22 12 19 15"/><polyline points="15 19 12 22 9 19"/><line x1="12" x2="12" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/></svg>,
-            Chat: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-            Star: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            Video: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>,
+            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            Share: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>,
+            Check: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polyline points="20 6 9 17 4 12"/></svg>,
+            Alert: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
+            Clock: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            Youtube: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
+            Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>,
+            Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
+            Move: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="19 9 22 12 19 15"/><polyline points="15 19 12 22 9 19"/><line x1="12" x2="12" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/></svg>,
+            Chat: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+            Star: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         };
 
-        // --- УНИВЕРСАЛЕН МЕДИЯ ПЛЕЪР (с проверка за готовност) ---
+        // ---------- QR КОД КОМПОНЕНТ (използва qrcode-generator) ----------
+        const QRCodeSVG = ({ value, size }) => {
+            const [qrSvg, setQrSvg] = useState('');
+            useEffect(() => {
+                if (window.qrcode) {
+                    const qr = window.qrcode(0, 'H'); // тип 0 = numeric/alphanumeric, корекция H
+                    qr.addData(value);
+                    qr.make();
+                    setQrSvg(qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true }));
+                }
+            }, [value]);
+            return <div dangerouslySetInnerHTML={{ __html: qrSvg }} style={{ width: size, height: size }} />;
+        };
+
+        // ---------- УНИВЕРСАЛЕН МЕДИА ПЛЕЪР (YouTube + mp4) ----------
         const MediaPlayer = forwardRef(({ url, onReady }, ref) => {
             const videoRef = useRef(null);
             const youtubePlayerRef = useRef(null);
@@ -116,10 +136,10 @@
             if (isYoutube) {
                 return <div className="w-full h-full bg-black rounded-xl overflow-hidden relative"><div id={playerId} className="w-full h-full"></div></div>;
             }
-            return <video ref={videoRef} src={url} controls className="w-full h-full object-contain bg-black rounded-xl" onLoadedMetadata={() => setPlayerReady(true)} />;
+            return <video ref={videoRef} src={url} controls className="w-full h-full object-contain bg-black rounded-xl" onLoadedMetadata={() => { setPlayerReady(true); if (onReady) onReady(); }} />;
         });
 
-        // --- КОМПОНЕНТ ЗА ВЛАЧЕНЕ (ЕТИКЕТ) с проверка за containerRef ---
+        // ---------- ДРАГАЕМ ЕТИКЕТ ----------
         const DraggableLabel = ({ text, containerRef }) => {
             const [pos, setPos] = useState({ x: Math.random() * 60 + 20, y: Math.random() * 60 + 20 }); 
             const [isDragging, setIsDragging] = useState(false);
@@ -188,6 +208,7 @@
             );
         };
 
+        // ---------- APP ----------
         const App = () => {
             const [view, setView] = useState('student');
             const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -195,9 +216,10 @@
             const [videoUrl, setVideoUrl] = useState('');
             const [questions, setQuestions] = useState([]);
             const [shareStatus, setShareStatus] = useState('');
-            const [isSharedMode, setIsSharedMode] = useState(false);
             const [shareError, setShareError] = useState('');
+            const [isSharedMode, setIsSharedMode] = useState(false);
 
+            // Зареждане от хеш или localStorage
             useEffect(() => {
                 const hash = window.location.hash.substring(1);
                 if (hash) {
@@ -209,8 +231,8 @@
                         if (decodedData.questions) setQuestions(decodedData.questions);
                         setIsSharedMode(true); 
                     } catch (e) { 
-                        console.error("Линкът е невалиден или повреден", e);
-                        alert('Линкът не съдържа валиден тест. Ще бъде зареден празен редактор.');
+                        console.error("Невалиден линк", e);
+                        alert('Линкът не съдържа валиден тест. Ще се зареди празен редактор.');
                     }
                 } else {
                     const savedVideo = localStorage.getItem('vq_videoUrl');
@@ -220,6 +242,7 @@
                 }
             }, []);
 
+            // Автоматично записване в localStorage (само ако не е споделен режим)
             useEffect(() => {
                 if (!isSharedMode) {
                     if (videoUrl) localStorage.setItem('vq_videoUrl', videoUrl);
@@ -230,13 +253,17 @@
             const generateShareLink = () => {
                 const data = { videoUrl, questions };
                 const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(data));
-                const url = `${window.location.origin}${window.location.pathname}#${compressed}`;
-                navigator.clipboard.writeText(url).then(() => {
+                return `${window.location.origin}${window.location.pathname}#${compressed}`;
+            };
+
+            const handleCopyLink = () => {
+                const link = generateShareLink();
+                navigator.clipboard.writeText(link).then(() => {
                     setShareStatus('Копирано!');
                     setShareError('');
                     setTimeout(() => setShareStatus(''), 3000);
                 }).catch(() => {
-                    setShareError('Не може да се копира автоматично. Линкът е в адресната лента (след #).');
+                    setShareError('Не може да се копира автоматично. Линкът е в адресната лента.');
                     setShareStatus('');
                 });
             };
@@ -283,9 +310,10 @@
                                     setQuestions={setQuestions} 
                                     videoUrl={videoUrl} 
                                     setVideoUrl={setVideoUrl} 
-                                    onShare={generateShareLink} 
+                                    onCopyLink={handleCopyLink}
                                     shareStatus={shareStatus}
                                     shareError={shareError}
+                                    generateShareLink={generateShareLink}
                                     isSharedMode={isSharedMode} 
                                     resetApp={resetApp} 
                                 />
@@ -296,6 +324,7 @@
             );
         };
 
+        // ---------- СТУДЕНТСКИ ИНТЕРФЕЙС ----------
         const StudentInterface = ({ videoUrl, questions }) => {
             const playerRef = useRef(null);
             const containerRef = useRef(null);
@@ -354,7 +383,6 @@
                                                 <Icons.Star className="w-4 h-4 text-yellow-500" />
                                                 {activeQuestion.points || 1} т.
                                             </div>
-
                                             <h3 className="text-xl font-bold mb-6 pr-12">{activeQuestion.text}</h3>
                                             {activeQuestion.type === 'single' && (
                                                 <div className="space-y-3">
@@ -415,7 +443,7 @@
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="bg-white p-6 rounded-2xl shadow-sm border text-center">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Прогрес на решаване</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Прогрес</p>
                             <p className="text-3xl font-black text-slate-800">{answeredIds.size} / {questions.length}</p>
                         </div>
                         <div className="bg-white p-6 rounded-2xl shadow-sm border text-center">
@@ -427,13 +455,16 @@
             );
         };
 
-        const TeacherDashboard = ({ questions, setQuestions, videoUrl, setVideoUrl, onShare, shareStatus, shareError, isSharedMode, resetApp }) => {
+        // ---------- УЧИТЕЛСКИ ИНТЕРФЕЙС ----------
+        const TeacherDashboard = ({ questions, setQuestions, videoUrl, setVideoUrl, onCopyLink, shareStatus, shareError, generateShareLink, isSharedMode, resetApp }) => {
             const playerRef = useRef(null);
             const fileInputRef = useRef(null);
             const [playerReady, setPlayerReady] = useState(false);
             const [newQ, setNewQ] = useState({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0, points: 1 });
             const [editingId, setEditingId] = useState(null);
-            
+            const [showQR, setShowQR] = useState(false);
+            const [currentShareLink, setCurrentShareLink] = useState('');
+
             const isYouTube = getYouTubeId(videoUrl);
 
             const handleEdit = (q) => {
@@ -477,7 +508,7 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'video-quiz-lesson.txt';
+                a.download = `video-quiz-${new Date().toISOString().slice(0,10)}.txt`;
                 a.click();
                 URL.revokeObjectURL(url);
             };
@@ -501,49 +532,34 @@
 
             // Добавяне/премахване на етикети за тип "label"
             const addLabelOption = () => {
-                setNewQ({ ...newQ, options: [...newQ.options, ''] });
+                setNewQ({ ...newQ, options: [...newQ.options, 'Нов етикет'] });
             };
-
             const removeLabelOption = (index) => {
                 const updated = newQ.options.filter((_, i) => i !== index);
                 setNewQ({ ...newQ, options: updated });
             };
 
+            // Генериране на линк за QR
+            const handleShowQR = () => {
+                setCurrentShareLink(generateShareLink());
+                setShowQR(true);
+            };
+
+            const isLinkTooLong = currentShareLink.length > 1900;
+
             return (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+                    {/* ЛЯВА КОЛОНА - ВИДЕО И СПИСЪК С ВЪПРОСИ */}
                     <div className="lg:col-span-8 space-y-6">
                         <div className="bg-white p-6 rounded-3xl border shadow-sm relative">
                             <div className="absolute top-6 right-6 flex items-center gap-2">
                                 <input type="file" ref={fileInputRef} onChange={handleImport} className="hidden" accept=".txt,.json" />
-                                <button 
-                                    onClick={() => fileInputRef.current.click()} 
-                                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                    title="Зареди от файл"
-                                >
-                                    <Icons.Upload />
-                                </button>
-                                <button 
-                                    onClick={handleExport} 
-                                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors"
-                                    title="Запази като файл"
-                                >
-                                    <Icons.Download />
-                                </button>
+                                <button onClick={() => fileInputRef.current.click()} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Зареди от файл"><Icons.Upload /></button>
+                                <button onClick={handleExport} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors" title="Запази като файл"><Icons.Download /></button>
                                 <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                                <button 
-                                    onClick={handleClearAll}
-                                    className="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors"
-                                >
-                                    <Icons.Refresh /> Нов
-                                </button>
+                                <button onClick={handleClearAll} className="flex items-center gap-1 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors"><Icons.Refresh /> Нов</button>
                             </div>
-
-                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <Icons.Video /> 
-                                Видео източник
-                                {isYouTube && <span className="bg-red-50 text-red-600 text-[10px] px-2 py-1 rounded-full flex items-center gap-1"><Icons.Youtube /> YouTube</span>}
-                            </h2>
-
+                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Icons.Video /> Видео източник {isYouTube && <span className="bg-red-50 text-red-600 text-[10px] px-2 py-1 rounded-full flex items-center gap-1"><Icons.Youtube /> YouTube</span>}</h2>
                             {videoUrl ? (
                                 <div className="w-full aspect-video bg-black rounded-xl mb-4 overflow-hidden">
                                     <MediaPlayer key={videoUrl} ref={playerRef} url={videoUrl} onReady={() => setPlayerReady(true)} />
@@ -551,15 +567,14 @@
                             ) : (
                                 <div className="w-full aspect-video bg-slate-50 rounded-xl mb-4 flex flex-col items-center justify-center border-2 border-dashed border-slate-200">
                                     <p className="text-slate-400 text-sm mb-2">Няма въведено видео</p>
-                                    <button onClick={() => setVideoUrl('https://www.youtube.com/watch?v=aqz-KE-bpKQ')} className="text-blue-600 text-xs font-bold hover:underline">
-                                        Зареди YouTube пример
-                                    </button>
+                                    <button onClick={() => setVideoUrl('https://www.youtube.com/watch?v=aqz-KE-bpKQ')} className="text-blue-600 text-xs font-bold hover:underline">Зареди YouTube пример</button>
                                 </div>
                             )}
                             <div className="flex gap-2">
                                 <input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} className="flex-1 p-3 rounded-xl border outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="YouTube линк или .mp4 файл..." />
                             </div>
                         </div>
+
                         <div className="space-y-4">
                             <h2 className="text-xl font-bold px-2">Въпроси в този тест ({questions.length})</h2>
                             {questions.sort((a,b) => a.time - b.time).map(q => (
@@ -567,12 +582,8 @@
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded font-mono">{q.time} сек</span>
-                                            <span className={`text-[10px] uppercase font-bold tracking-wider ${q.type === 'label' ? 'text-purple-500' : 'text-blue-500'}`}>
-                                                {q.type === 'single' ? 'Избор' : q.type === 'multiple' ? 'Множествен' : q.type === 'label' ? 'Етикети' : 'Текст'}
-                                            </span>
-                                            <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 rounded-full ml-1">
-                                                {q.points ?? 1} т.
-                                            </span>
+                                            <span className={`text-[10px] uppercase font-bold tracking-wider ${q.type === 'label' ? 'text-purple-500' : 'text-blue-500'}`}>{q.type === 'single' ? 'Избор' : q.type === 'multiple' ? 'Множествен' : q.type === 'label' ? 'Етикети' : 'Текст'}</span>
+                                            <span className="text-[10px] text-slate-400 font-bold bg-slate-100 px-2 rounded-full ml-1">{q.points ?? 1} т.</span>
                                             {editingId === q.id && <span className="text-[10px] font-bold text-blue-600 bg-white px-2 rounded-full animate-pulse">Редактиране...</span>}
                                         </div>
                                         <span className="font-bold text-slate-700">{q.text}</span>
@@ -593,45 +604,72 @@
                             {questions.length === 0 && <div className="text-center py-10 border-2 border-dashed rounded-3xl text-slate-400">Няма добавени моменти за спиране.</div>}
                         </div>
                     </div>
+
+                    {/* ДЯСНА КОЛОНА - СПОДЕЛЯНЕ И РЕДАКТОР */}
                     <div className="lg:col-span-4 space-y-6">
+                        {/* ПАНЕЛ ЗА СПОДЕЛЯНЕ */}
                         <div className="bg-blue-600 p-6 rounded-3xl text-white shadow-xl">
                             <h3 className="text-lg font-bold mb-2 flex items-center gap-2">Споделяне</h3>
-                            <p className="text-sm opacity-80 mb-6">Линкът автоматично включва всички промени, които правите.</p>
-                            <button onClick={onShare} className="w-full bg-white text-blue-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50" disabled={!videoUrl}>
+                            <p className="text-sm opacity-80 mb-6">Линкът включва всички промени. При дълъг линк – използвайте QR или файл.</p>
+                            <button onClick={onCopyLink} className="w-full bg-white text-blue-600 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50 mb-2" disabled={!videoUrl}>
                                 {shareStatus ? <Icons.Check className="w-5 h-5" /> : <Icons.Share />} {shareStatus || 'Копирай линк'}
                             </button>
+                            {currentShareLink && isLinkTooLong && (
+                                <div className="mt-2 text-xs bg-yellow-300 text-yellow-900 p-2 rounded-lg flex items-start gap-2">
+                                    <Icons.Alert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                    <span>⚠️ Линкът е много дълъг ({currentShareLink.length} символа). Използвайте QR код или файл.</span>
+                                </div>
+                            )}
+                            <div className="flex gap-2 mt-3">
+                                <button onClick={handleShowQR} disabled={!videoUrl} className="flex-1 bg-blue-500 hover:bg-blue-400 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50">📲 QR код</button>
+                                <button onClick={handleExport} disabled={!videoUrl} className="flex-1 bg-blue-500 hover:bg-blue-400 text-white py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50"><Icons.Download className="w-3 h-3" /> Файл</button>
+                            </div>
                             {shareError && <p className="text-xs mt-2 text-white/80">{shareError}</p>}
                         </div>
+
+                        {/* МОДАЛ ЗА QR КОД */}
+                        {showQR && (
+                            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setShowQR(false)}>
+                                <div className="bg-white p-6 rounded-3xl max-w-sm w-full shadow-2xl animate-fade-in" onClick={e => e.stopPropagation()}>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h4 className="font-bold text-lg">QR код за теста</h4>
+                                        <button onClick={() => setShowQR(false)} className="text-slate-400 hover:text-slate-600"><Icons.X /></button>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-2xl flex flex-col items-center">
+                                        <QRCodeSVG value={currentShareLink} size={200} />
+                                        <p className="text-xs text-slate-500 mt-4 break-all text-center">
+                                            {currentShareLink.length > 100 ? currentShareLink.slice(0, 70) + '…' : currentShareLink}
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-2">Сканирайте с телефон за достъп до теста.</p>
+                                        <button onClick={() => { navigator.clipboard.writeText(currentShareLink); alert('Линкът е копиран!'); }} className="mt-4 text-sm text-blue-600 underline">Копирай линка</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ПАНЕЛ ЗА ДОБАВЯНЕ/РЕДАКТИРАНЕ НА ВЪПРОС */}
                         <div className={`bg-white p-6 rounded-3xl border shadow-xl transition-all ${editingId ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}>
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold flex items-center gap-2">
-                                    {editingId ? 'Редактиране на въпрос' : 'Нов момент'}
-                                </h3>
+                                <h3 className="font-bold flex items-center gap-2">{editingId ? 'Редактиране на въпрос' : 'Нов момент'}</h3>
                                 {editingId && <button onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-600 bg-slate-100 px-2 py-1 rounded"><Icons.X /></button>}
                             </div>
-                            
                             <div className="space-y-4">
+                                {/* Тип въпрос */}
                                 <div className="flex bg-slate-100 p-1 rounded-lg gap-1 overflow-x-auto">
                                     <button onClick={() => setNewQ({...newQ, type: 'single', correct: 0, points: 1, options: ['', '']})} className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition-all whitespace-nowrap ${newQ.type === 'single' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Избор</button>
                                     <button onClick={() => setNewQ({...newQ, type: 'multiple', correct: [], points: 1, options: ['', '']})} className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition-all whitespace-nowrap ${newQ.type === 'multiple' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Множествен</button>
                                     <button onClick={() => setNewQ({...newQ, type: 'text', correct: '', points: 1, options: ['', '']})} className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition-all whitespace-nowrap ${newQ.type === 'text' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Текст</button>
                                     <button onClick={() => setNewQ({...newQ, type: 'label', correct: null, points: 0, options: ['Етикет 1', 'Етикет 2']})} className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-md transition-all whitespace-nowrap ${newQ.type === 'label' ? 'bg-white shadow text-purple-600' : 'text-slate-500'}`}>Етикети</button>
                                 </div>
+                                {/* Текст на въпроса */}
                                 <textarea value={newQ.text} onChange={e => setNewQ({...newQ, text: e.target.value})} className="w-full p-3 border rounded-xl outline-none focus:border-blue-500 transition-all text-sm" placeholder={newQ.type === 'label' ? "Инструкция за дискусия..." : "Какъв е въпросът?"} />
-                                
+                                {/* Време и точки */}
                                 <div className="flex gap-2">
                                     <div className="flex-1">
                                         <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">Време (сек)</label>
                                         <div className="flex gap-2">
                                             <input type="number" value={newQ.time} onChange={e => setNewQ({...newQ, time: parseInt(e.target.value) || 0})} className="w-full p-2 border rounded-lg text-sm font-mono" />
-                                            <button 
-                                                onClick={() => videoUrl && playerReady && playerRef.current?.getTime && setNewQ({...newQ, time: Math.floor(playerRef.current.getTime())})} 
-                                                className="px-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 border border-blue-100 transition-all flex items-center justify-center disabled:opacity-50"
-                                                disabled={!videoUrl || !playerReady}
-                                                title="Вземи от видеото"
-                                            >
-                                                <Icons.Clock className="w-4 h-4" />
-                                            </button>
+                                            <button onClick={() => videoUrl && playerReady && playerRef.current?.getTime && setNewQ({...newQ, time: Math.floor(playerRef.current.getTime())})} className="px-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold hover:bg-blue-100 border border-blue-100 transition-all flex items-center justify-center disabled:opacity-50" disabled={!videoUrl || !playerReady} title="Вземи от видеото"><Icons.Clock className="w-4 h-4" /></button>
                                         </div>
                                     </div>
                                     <div className="w-1/3">
@@ -639,7 +677,7 @@
                                         <input type="number" value={newQ.points} onChange={e => setNewQ({...newQ, points: parseInt(e.target.value) || 0})} className="w-full p-2 border rounded-lg text-sm font-mono text-center" />
                                     </div>
                                 </div>
-                                
+
                                 {/* Опции за единичен/множествен избор */}
                                 {(newQ.type === 'single' || newQ.type === 'multiple') && (
                                     <div className="space-y-2">
@@ -649,82 +687,60 @@
                                                 {newQ.type === 'single' ? (
                                                     <input type="radio" checked={newQ.correct === i} onChange={() => setNewQ({...newQ, correct: i})} className="w-4 h-4 cursor-pointer accent-blue-600" />
                                                 ) : (
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={Array.isArray(newQ.correct) ? newQ.correct.includes(i) : false} 
-                                                        onChange={() => {
-                                                            const currentCorrect = Array.isArray(newQ.correct) ? newQ.correct : [];
-                                                            const newCorrect = currentCorrect.includes(i) 
-                                                                ? currentCorrect.filter(c => c !== i) 
-                                                                : [...currentCorrect, i];
-                                                            setNewQ({...newQ, correct: newCorrect});
-                                                        }} 
-                                                        className="w-4 h-4 cursor-pointer accent-blue-600" 
-                                                    />
+                                                    <input type="checkbox" checked={Array.isArray(newQ.correct) ? newQ.correct.includes(i) : false} onChange={() => {
+                                                        const currentCorrect = Array.isArray(newQ.correct) ? newQ.correct : [];
+                                                        const newCorrect = currentCorrect.includes(i) ? currentCorrect.filter(c => c !== i) : [...currentCorrect, i];
+                                                        setNewQ({...newQ, correct: newCorrect});
+                                                    }} className="w-4 h-4 cursor-pointer accent-blue-600" />
                                                 )}
                                                 <input value={o} onChange={e => { const opts = [...newQ.options]; opts[i] = e.target.value; setNewQ({...newQ, options: opts}); }} className="flex-1 p-2 border rounded-lg text-xs outline-none focus:border-blue-300 transition-all" placeholder={`Опция ${i+1}`} />
-                                                {newQ.options.length > 1 && (
-                                                    <button onClick={() => { const opts = newQ.options.filter((_, idx) => idx !== i); setNewQ({...newQ, options: opts}); }} className="text-red-400 hover:text-red-600">
-                                                        <Icons.X />
-                                                    </button>
-                                                )}
+                                                {newQ.options.length > 1 && <button onClick={() => { const opts = newQ.options.filter((_, idx) => idx !== i); setNewQ({...newQ, options: opts}); }} className="text-red-400 hover:text-red-600"><Icons.X /></button>}
                                             </div>
                                         ))}
                                         <button onClick={() => setNewQ({...newQ, options: [...newQ.options, '']})} className="text-[10px] text-blue-600 font-bold">+ Добави още</button>
                                     </div>
                                 )}
 
-                                {/* Етикети – специален раздел за тип "label" */}
+                                {/* Етикети – специален раздел */}
                                 {newQ.type === 'label' && (
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Етикети за влачене</label>
                                         {newQ.options.map((label, i) => (
                                             <div key={i} className="flex gap-2 items-center">
                                                 <span className="text-purple-500">🏷️</span>
-                                                <input 
-                                                    value={label} 
-                                                    onChange={e => { 
-                                                        const opts = [...newQ.options]; 
-                                                        opts[i] = e.target.value; 
-                                                        setNewQ({...newQ, options: opts}); 
-                                                    }} 
-                                                    className="flex-1 p-2 border rounded-lg text-xs outline-none focus:border-purple-300 transition-all" 
-                                                    placeholder={`Етикет ${i+1}`} 
-                                                />
-                                                {newQ.options.length > 1 && (
-                                                    <button onClick={() => removeLabelOption(i)} className="text-red-400 hover:text-red-600">
-                                                        <Icons.X />
-                                                    </button>
-                                                )}
+                                                <input value={label} onChange={e => { const opts = [...newQ.options]; opts[i] = e.target.value; setNewQ({...newQ, options: opts}); }} className="flex-1 p-2 border rounded-lg text-xs outline-none focus:border-purple-300 transition-all" placeholder={`Етикет ${i+1}`} />
+                                                {newQ.options.length > 1 && <button onClick={() => removeLabelOption(i)} className="text-red-400 hover:text-red-600"><Icons.X /></button>}
                                             </div>
                                         ))}
                                         <button onClick={addLabelOption} className="text-[10px] text-purple-600 font-bold">+ Добави етикет</button>
                                     </div>
                                 )}
-                                
+
+                                {/* Текстов отговор - верен отговор */}
                                 {newQ.type === 'text' && (
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">Очакван верен отговор</label>
                                         <input value={newQ.correct} onChange={e => setNewQ({...newQ, correct: e.target.value})} className="w-full p-2 border rounded-lg text-sm outline-none focus:border-blue-300" placeholder="Напр. Париж" />
                                     </div>
                                 )}
-                                
-                                <button 
-                                    onClick={handleSaveQuestion} 
-                                    className={`w-full text-white py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 disabled:opacity-50 ${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-800 hover:bg-slate-900'}`}
-                                    disabled={!videoUrl}
-                                >
+
+                                {/* Бутон за запазване */}
+                                <button onClick={handleSaveQuestion} className={`w-full text-white py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 disabled:opacity-50 ${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-800 hover:bg-slate-900'}`} disabled={!videoUrl}>
                                     {editingId ? 'Запази промените' : 'Добави към теста'}
                                 </button>
-                                {editingId && (
-                                    <button onClick={handleCancelEdit} className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-700">Отказ</button>
-                                )}
+                                {editingId && <button onClick={handleCancelEdit} className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-700">Отказ</button>}
                             </div>
                         </div>
                     </div>
                 </div>
             );
         };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
