@@ -22,7 +22,6 @@
         const { useState, useEffect, useRef, useImperativeHandle, forwardRef } = React;
 
         // --- ПОМОЩНИ ФУНКЦИИ ---
-        // Извличане на ID от YouTube линк
         const getYouTubeId = (url) => {
             if (!url) return null;
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -39,15 +38,20 @@
             Check: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"/></svg>,
             Alert: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>,
             Clock: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-            Youtube: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>
+            Youtube: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/></svg>,
+            Edit: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+            Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         };
 
-        // --- УНИВЕРСАЛЕН МЕДИЯ ПЛЕЪР (MP4 + YOUTUBE) ---
+        // --- УНИВЕРСАЛЕН МЕДИЯ ПЛЕЪР ---
         const MediaPlayer = forwardRef(({ url }, ref) => {
             const videoRef = useRef(null);
             const youtubePlayerRef = useRef(null);
             const [isYoutube, setIsYoutube] = useState(false);
             const [ytId, setYtId] = useState(null);
+            const [apiReady, setApiReady] = useState(false);
+            const playerId = useRef(`yt-player-${Math.random().toString(36).substr(2, 9)}`).current;
 
             useEffect(() => {
                 const id = getYouTubeId(url);
@@ -55,78 +59,46 @@
                 setIsYoutube(!!id);
             }, [url]);
 
-            // Зареждане на YouTube API
             useEffect(() => {
-                if (isYoutube && !window.YT) {
-                    const tag = document.createElement('script');
-                    tag.src = "https://www.youtube.com/iframe_api";
-                    const firstScriptTag = document.getElementsByTagName('script')[0];
-                    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-                    
-                    window.onYouTubeIframeAPIReady = () => {
-                        // API is ready, component will re-render or handle in next effect
-                    };
+                if (isYoutube) {
+                    if (window.YT && window.YT.Player) {
+                        setApiReady(true);
+                    } else if (!window.YT) {
+                        const tag = document.createElement('script');
+                        tag.src = "https://www.youtube.com/iframe_api";
+                        const firstScriptTag = document.getElementsByTagName('script')[0];
+                        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                        window.onYouTubeIframeAPIReady = () => setApiReady(true);
+                    }
                 }
             }, [isYoutube]);
 
-            // Инициализация на YouTube плейъра
             useEffect(() => {
-                if (isYoutube && ytId && window.YT) {
-                    // Ако вече има плейър, го унищожаваме (за да не се дублират)
+                if (isYoutube && ytId && apiReady) {
                     if (youtubePlayerRef.current) {
                         try { youtubePlayerRef.current.destroy(); } catch(e) {}
                     }
-
-                    youtubePlayerRef.current = new window.YT.Player('youtube-player', {
-                        height: '100%',
-                        width: '100%',
-                        videoId: ytId,
-                        playerVars: {
-                            'playsinline': 1,
-                            'controls': 1,
-                            'rel': 0
-                        }
-                    });
+                    setTimeout(() => {
+                        youtubePlayerRef.current = new window.YT.Player(playerId, {
+                            height: '100%',
+                            width: '100%',
+                            videoId: ytId,
+                            playerVars: { 'playsinline': 1, 'controls': 1, 'rel': 0, 'modestbranding': 1 }
+                        });
+                    }, 100);
                 }
-            }, [isYoutube, ytId]);
+            }, [isYoutube, ytId, apiReady]);
 
-            // Методи, достъпни за родителя (play, pause, getTime)
             useImperativeHandle(ref, () => ({
-                play: () => {
-                    if (isYoutube) youtubePlayerRef.current?.playVideo();
-                    else videoRef.current?.play();
-                },
-                pause: () => {
-                    if (isYoutube) youtubePlayerRef.current?.pauseVideo();
-                    else videoRef.current?.pause();
-                },
-                getTime: () => {
-                    if (isYoutube) {
-                        return youtubePlayerRef.current && youtubePlayerRef.current.getCurrentTime 
-                            ? youtubePlayerRef.current.getCurrentTime() 
-                            : 0;
-                    }
-                    return videoRef.current?.currentTime || 0;
-                }
+                play: () => isYoutube ? youtubePlayerRef.current?.playVideo() : videoRef.current?.play(),
+                pause: () => isYoutube ? youtubePlayerRef.current?.pauseVideo() : videoRef.current?.pause(),
+                getTime: () => isYoutube ? (youtubePlayerRef.current?.getCurrentTime ? youtubePlayerRef.current.getCurrentTime() : 0) : (videoRef.current?.currentTime || 0)
             }));
 
             if (isYoutube) {
-                return (
-                    <div className="w-full h-full bg-black rounded-xl overflow-hidden relative">
-                         <div id="youtube-player" className="w-full h-full"></div>
-                    </div>
-                );
+                return <div className="w-full h-full bg-black rounded-xl overflow-hidden relative"><div id={playerId} className="w-full h-full"></div></div>;
             }
-
-            return (
-                <video 
-                    ref={videoRef} 
-                    src={url} 
-                    controls 
-                    className="w-full h-full object-contain bg-black rounded-xl"
-                    onError={() => {}} 
-                />
-            );
+            return <video ref={videoRef} src={url} controls className="w-full h-full object-contain bg-black rounded-xl" onError={() => {}} />;
         });
 
         const App = () => {
@@ -155,7 +127,7 @@
 
             useEffect(() => {
                 if (videoUrl) localStorage.setItem('vq_videoUrl', videoUrl);
-                if (questions.length > 0) localStorage.setItem('vq_questions', JSON.stringify(questions));
+                localStorage.setItem('vq_questions', JSON.stringify(questions));
             }, [videoUrl, questions]);
 
             const generateShareLink = () => {
@@ -190,19 +162,8 @@
                                     <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6"><Icons.Lock /></div>
                                     <h2 className="text-2xl font-bold mb-2">Режим Дизайн</h2>
                                     <p className="text-slate-500 text-sm mb-6">Въведете паролата за достъп до редактора</p>
-                                    <input 
-                                        type="password" 
-                                        value={password} 
-                                        onChange={(e) => setPassword(e.target.value)} 
-                                        placeholder="Парола..." 
-                                        className="w-full px-4 py-3 rounded-xl border mb-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all" 
-                                    />
-                                    <button 
-                                        onClick={() => password === 'admin' ? setIsAuthenticated(true) : alert('Грешна парола')} 
-                                        className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100"
-                                    >
-                                        Влез в настройките
-                                    </button>
+                                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Парола..." className="w-full px-4 py-3 rounded-xl border mb-4 outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                                    <button onClick={() => password === 'admin' ? setIsAuthenticated(true) : alert('Грешна парола')} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">Влез в настройките</button>
                                 </div>
                             ) : (
                                 <TeacherDashboard questions={questions} setQuestions={setQuestions} videoUrl={videoUrl} setVideoUrl={setVideoUrl} onShare={generateShareLink} shareStatus={shareStatus} />
@@ -225,9 +186,7 @@
                 if (!videoUrl) return;
                 const checkTime = () => {
                     if (!playerRef.current) return;
-                    // Взимаме времето чрез универсалния метод
                     const time = Math.floor(playerRef.current.getTime());
-                    
                     const q = questions.find(q => q.time === time && !answeredIds.has(q.id));
                     if (q) {
                         playerRef.current.pause();
@@ -260,34 +219,25 @@
             return (
                 <div className="space-y-6 animate-fade-in">
                     <div className="relative aspect-video bg-black rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-                        <MediaPlayer ref={playerRef} url={videoUrl} />
-                        
+                        <MediaPlayer key={videoUrl} ref={playerRef} url={videoUrl} />
                         {activeQuestion && (
                             <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-6 z-40">
                                 <div className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-2xl animate-fade-in">
                                     <h3 className="text-xl font-bold mb-6">{activeQuestion.text}</h3>
-                                    
-                                    {/* Един верен отговор */}
                                     {activeQuestion.type === 'single' && (
                                         <div className="space-y-3">
                                             {activeQuestion.options.map((opt, i) => (
                                                 <button key={i} onClick={() => submit(i === activeQuestion.correct)} className="w-full text-left p-4 rounded-xl border-2 hover:border-blue-500 transition-all font-medium flex justify-between items-center group">
-                                                    {opt}
-                                                    <div className="w-5 h-5 rounded-full border-2 border-slate-200 group-hover:border-blue-500 transition-all"></div>
+                                                    {opt}<div className="w-5 h-5 rounded-full border-2 border-slate-200 group-hover:border-blue-500 transition-all"></div>
                                                 </button>
                                             ))}
                                         </div>
                                     )}
-
-                                    {/* Множествен отговор */}
                                     {activeQuestion.type === 'multiple' && (
                                         <div className="space-y-3">
                                             {activeQuestion.options.map((opt, i) => (
                                                 <button key={i} onClick={() => setSelectedOptions(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center group ${selectedOptions.includes(i) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'hover:border-blue-500'}`}>
-                                                    {opt}
-                                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedOptions.includes(i) ? 'bg-blue-600 border-blue-600' : 'border-slate-200 group-hover:border-blue-500'}`}>
-                                                        {selectedOptions.includes(i) && <Icons.Check className="text-white w-3 h-3" />}
-                                                    </div>
+                                                    {opt}<div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedOptions.includes(i) ? 'bg-blue-600 border-blue-600' : 'border-slate-200 group-hover:border-blue-500'}`}>{selectedOptions.includes(i) && <Icons.Check className="text-white w-3 h-3" />}</div>
                                                 </button>
                                             ))}
                                             <button onClick={() => {
@@ -297,8 +247,6 @@
                                             }} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors mt-2">Потвърди</button>
                                         </div>
                                     )}
-
-                                    {/* Свободен текст */}
                                     {activeQuestion.type === 'text' && (
                                         <div className="space-y-4">
                                             <input value={textAnswer} onChange={e => setTextAnswer(e.target.value)} className="w-full p-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all" placeholder="Напишете вашия отговор..." />
@@ -326,14 +274,65 @@
         const TeacherDashboard = ({ questions, setQuestions, videoUrl, setVideoUrl, onShare, shareStatus }) => {
             const playerRef = useRef(null);
             const [newQ, setNewQ] = useState({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
+            const [editingId, setEditingId] = useState(null);
             
-            // Проверка дали е YouTube
             const isYouTube = getYouTubeId(videoUrl);
+
+            // Обработка на редакция на въпрос
+            const handleEdit = (q) => {
+                setNewQ({ ...q }); // Копираме данните на въпроса във формата
+                setEditingId(q.id); // Задаваме ID-то на въпроса, който редактираме
+                // Скрол до формата (опционално, но полезно)
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            };
+
+            // Запазване на въпрос (нов или редактиран)
+            const handleSaveQuestion = () => {
+                if (!newQ.text) return;
+
+                if (editingId) {
+                    // Обновяване на съществуващ въпрос
+                    setQuestions(questions.map(q => q.id === editingId ? { ...newQ, id: editingId } : q));
+                    setEditingId(null);
+                } else {
+                    // Добавяне на нов въпрос
+                    setQuestions([...questions, { ...newQ, id: Date.now() }]);
+                }
+                
+                // Изчистване на формата
+                setNewQ({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
+            };
+
+            // Отказ от редакция
+            const handleCancelEdit = () => {
+                setEditingId(null);
+                setNewQ({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
+            };
+
+            // Изчистване на целия тест (Нов тест)
+            const handleClearAll = () => {
+                if (confirm('Сигурни ли сте? Това ще изтрие текущото видео и всички въпроси.')) {
+                    setVideoUrl('');
+                    setQuestions([]);
+                    setNewQ({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 });
+                    setEditingId(null);
+                    localStorage.removeItem('vq_videoUrl');
+                    localStorage.removeItem('vq_questions');
+                }
+            };
 
             return (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
                     <div className="lg:col-span-8 space-y-6">
-                        <div className="bg-white p-6 rounded-3xl border shadow-sm">
+                        <div className="bg-white p-6 rounded-3xl border shadow-sm relative">
+                            {/* Бутон за Нов Тест */}
+                             <button 
+                                onClick={handleClearAll}
+                                className="absolute top-6 right-6 flex items-center gap-2 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors"
+                            >
+                                <Icons.Refresh /> Нов тест (Изчисти)
+                            </button>
+
                             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                                 <Icons.Video /> 
                                 Видео източник
@@ -342,7 +341,7 @@
 
                             {videoUrl ? (
                                 <div className="w-full aspect-video bg-black rounded-xl mb-4 overflow-hidden">
-                                    <MediaPlayer ref={playerRef} url={videoUrl} />
+                                    <MediaPlayer key={videoUrl} ref={playerRef} url={videoUrl} />
                                 </div>
                             ) : (
                                 <div className="w-full aspect-video bg-slate-50 rounded-xl mb-4 flex flex-col items-center justify-center border-2 border-dashed border-slate-200">
@@ -359,17 +358,21 @@
                         <div className="space-y-4">
                             <h2 className="text-xl font-bold px-2">Въпроси в този тест ({questions.length})</h2>
                             {questions.sort((a,b) => a.time - b.time).map(q => (
-                                <div key={q.id} className="bg-white p-4 rounded-2xl border flex justify-between items-center group hover:border-blue-200 transition-all">
+                                <div key={q.id} className={`bg-white p-4 rounded-2xl border flex justify-between items-center group hover:border-blue-200 transition-all ${editingId === q.id ? 'border-blue-500 bg-blue-50 shadow-md' : ''}`}>
                                     <div>
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="text-[10px] bg-slate-800 text-white px-2 py-0.5 rounded font-mono">{q.time} сек</span>
                                             <span className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">
                                                 {q.type === 'single' ? 'Избор' : q.type === 'multiple' ? 'Множествен' : 'Текст'}
                                             </span>
+                                            {editingId === q.id && <span className="text-[10px] font-bold text-blue-600 bg-white px-2 rounded-full animate-pulse">Редактиране...</span>}
                                         </div>
                                         <span className="font-bold text-slate-700">{q.text}</span>
                                     </div>
-                                    <button onClick={() => setQuestions(questions.filter(x => x.id !== q.id))} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all"><Icons.Trash /></button>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => handleEdit(q)} className="text-slate-400 hover:text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-all" title="Редактирай"><Icons.Edit /></button>
+                                        <button onClick={() => setQuestions(questions.filter(x => x.id !== q.id))} className="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all" title="Изтрий"><Icons.Trash /></button>
+                                    </div>
                                 </div>
                             ))}
                             {questions.length === 0 && <div className="text-center py-10 border-2 border-dashed rounded-3xl text-slate-400">Няма добавени моменти за спиране.</div>}
@@ -383,8 +386,14 @@
                                 {shareStatus ? <Icons.Check className="w-5 h-5" /> : <Icons.Share />} {shareStatus || 'Копирай линк'}
                             </button>
                         </div>
-                        <div className="bg-white p-6 rounded-3xl border shadow-xl">
-                            <h3 className="font-bold mb-4 flex items-center gap-2">Нов момент</h3>
+                        <div className={`bg-white p-6 rounded-3xl border shadow-xl transition-all ${editingId ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold flex items-center gap-2">
+                                    {editingId ? 'Редактиране на въпрос' : 'Нов момент'}
+                                </h3>
+                                {editingId && <button onClick={handleCancelEdit} className="text-xs text-slate-400 hover:text-slate-600 bg-slate-100 px-2 py-1 rounded"><Icons.X /></button>}
+                            </div>
+                            
                             <div className="space-y-4">
                                 <div className="flex bg-slate-100 p-1 rounded-lg gap-1">
                                     <button onClick={() => setNewQ({...newQ, type: 'single', correct: 0})} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${newQ.type === 'single' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}>Избор</button>
@@ -406,7 +415,6 @@
                                     </div>
                                 </div>
                                 
-                                {/* Опции за Single и Multiple */}
                                 {(newQ.type === 'single' || newQ.type === 'multiple') && (
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Опции (маркирайте верните)</label>
@@ -427,14 +435,23 @@
                                     </div>
                                 )}
 
-                                {/* Свободен текст */}
                                 {newQ.type === 'text' && (
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase tracking-wider">Очакван верен отговор</label>
                                         <input value={newQ.correct} onChange={e => setNewQ({...newQ, correct: e.target.value})} className="w-full p-2 border rounded-lg text-sm outline-none focus:border-blue-300" placeholder="Напр. Париж" />
                                     </div>
                                 )}
-                                <button onClick={() => { setQuestions([...questions, {...newQ, id: Date.now()}]); setNewQ({ text: '', time: 0, type: 'single', options: ['', ''], correct: 0 }); }} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold hover:bg-slate-900 transition-all shadow-lg active:scale-95 disabled:opacity-50" disabled={!videoUrl}>Добави към теста</button>
+                                
+                                <button 
+                                    onClick={handleSaveQuestion} 
+                                    className={`w-full text-white py-3 rounded-xl font-bold transition-all shadow-lg active:scale-95 disabled:opacity-50 ${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-800 hover:bg-slate-900'}`}
+                                    disabled={!videoUrl}
+                                >
+                                    {editingId ? 'Запази промените' : 'Добави към теста'}
+                                </button>
+                                {editingId && (
+                                    <button onClick={handleCancelEdit} className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-700">Отказ</button>
+                                )}
                             </div>
                         </div>
                     </div>
