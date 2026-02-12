@@ -354,8 +354,10 @@
                                                         </button>
                                                     ))}
                                                     <button onClick={() => {
+                                                        // ФИКСИРАНА ПРОВЕРКА ЗА МНОЖЕСТВЕН ИЗБОР
                                                         const isCorrect = Array.isArray(activeQuestion.correct) && 
-                                                            JSON.stringify([...activeQuestion.correct].sort((a,b)=>a-b)) === JSON.stringify([...selectedOptions].sort((a,b)=>a-b));
+                                                            activeQuestion.correct.length === selectedOptions.length &&
+                                                            activeQuestion.correct.every(val => selectedOptions.includes(val));
                                                         submit(isCorrect);
                                                     }} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors mt-2">Потвърди</button>
                                                 </div>
@@ -609,10 +611,19 @@
                                                 {newQ.type === 'single' ? (
                                                     <input type="radio" checked={newQ.correct === i} onChange={() => setNewQ({...newQ, correct: i})} className="w-4 h-4 cursor-pointer accent-blue-600" />
                                                 ) : (
-                                                    <input type="checkbox" checked={newQ.correct.includes(i)} onChange={() => {
-                                                        const newCorrect = newQ.correct.includes(i) ? newQ.correct.filter(c => c !== i) : [...newQ.correct, i];
-                                                        setNewQ({...newQ, correct: newCorrect});
-                                                    }} className="w-4 h-4 cursor-pointer accent-blue-600" />
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={Array.isArray(newQ.correct) ? newQ.correct.includes(i) : false} 
+                                                        onChange={() => {
+                                                            // ФИКСИРАНА ЛОГИКА ЗА CHECKBOX
+                                                            const currentCorrect = Array.isArray(newQ.correct) ? newQ.correct : [];
+                                                            const newCorrect = currentCorrect.includes(i) 
+                                                                ? currentCorrect.filter(c => c !== i) 
+                                                                : [...currentCorrect, i];
+                                                            setNewQ({...newQ, correct: newCorrect});
+                                                        }} 
+                                                        className="w-4 h-4 cursor-pointer accent-blue-600" 
+                                                    />
                                                 )}
                                                 <input value={o} onChange={e => { const opts = [...newQ.options]; opts[i] = e.target.value; setNewQ({...newQ, options: opts}); }} className="flex-1 p-2 border rounded-lg text-xs outline-none focus:border-blue-300 transition-all" placeholder={`Опция ${i+1}`} />
                                             </div>
