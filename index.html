@@ -2,7 +2,7 @@
 <html lang="bg">
 <head>
     <meta charset="UTF-8">
-    <!-- Подобрен viewport за мобилни устройства -->
+    <!-- Подобрен viewport за мобилни и хоризонтален режим -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Компресия -->
+    <!-- Компресия за линкове -->
     <script src="https://unpkg.com/lz-string@1.4.4/libs/lz-string.min.js"></script>
     <!-- QR код генератор (офлайн) -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
@@ -20,11 +20,15 @@
     <!-- Шрифт -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+        }
         .animate-fade-in { animation: fadeIn 0.3s ease-out; }
         .animate-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes popIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+        
         .draggable-item { touch-action: none; user-select: none; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -33,10 +37,10 @@
         .draggable-item::after {
             content: '';
             position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
+            top: -15px;
+            left: -15px;
+            right: -15px;
+            bottom: -15px;
             background: transparent;
         }
         
@@ -82,7 +86,7 @@
             return <div dangerouslySetInnerHTML={{ __html: qrSvg }} style={{ width: size, height: size }} />;
         };
 
-        // ==================== ИКОНИ ====================
+        // ==================== ИКОНИ (само най-използваните) ====================
         const Icons = {
             Video: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>,
             Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
@@ -104,7 +108,7 @@
             Fullscreen: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         };
 
-        // ==================== МЕДИА ПЛЕЙЪР ====================
+        // ==================== МЕДИА ПЛЕЙЪР (YouTube + MP4) ====================
         const MediaPlayer = forwardRef(({ url, onReady }, ref) => {
             const videoRef = useRef(null);
             const youtubePlayerRef = useRef(null);
@@ -236,7 +240,9 @@
                 <div 
                     onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
                     onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
-                    className={`absolute px-5 py-3 bg-white/95 backdrop-blur border-2 border-blue-500 rounded-xl shadow-xl cursor-move font-bold text-slate-800 animate-pop select-none draggable-item z-50 ${isDragging ? 'scale-110 shadow-2xl ring-2 ring-blue-300' : ''}`}
+                    className={`absolute px-5 py-3 bg-white/95 backdrop-blur border-2 border-blue-500 rounded-xl shadow-xl cursor-move font-bold text-slate-800 animate-pop select-none draggable-item z-50 ${
+                        isDragging ? 'scale-110 shadow-2xl ring-2 ring-blue-300' : ''
+                    }`}
                     style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
                 >
                     <div className="flex items-center gap-2 text-base sm:text-lg">
@@ -247,7 +253,7 @@
             );
         };
 
-        // ==================== СТУДЕНТСКИ ИНТЕРФЕЙС ====================
+        // ==================== СТУДЕНТСКИ ИНТЕРФЕЙС (с хоризонтален режим) ====================
         const StudentInterface = ({ videoUrl, questions }) => {
             const playerRef = useRef(null);
             const containerRef = useRef(null);
@@ -256,6 +262,19 @@
             const [answeredIds, setAnsweredIds] = useState(new Set());
             const [textAnswer, setTextAnswer] = useState('');
             const [selectedOptions, setSelectedOptions] = useState([]);
+            
+            // Откриване на хоризонтална ориентация (само за мобилни)
+            const [isLandscape, setIsLandscape] = useState(false);
+            
+            useEffect(() => {
+                const checkOrientation = () => {
+                    const isLandscape = window.matchMedia("(orientation: landscape) and (max-width: 896px)").matches;
+                    setIsLandscape(isLandscape);
+                };
+                checkOrientation();
+                window.addEventListener('resize', checkOrientation);
+                return () => window.removeEventListener('resize', checkOrientation);
+            }, []);
 
             useEffect(() => {
                 if (!videoUrl) return;
@@ -300,67 +319,33 @@
 
             return (
                 <div className="space-y-4 sm:space-y-6 animate-fade-in">
-                    <div ref={containerRef} className="relative aspect-video bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-2 sm:border-4 border-white">
-                        <MediaPlayer key={videoUrl} ref={playerRef} url={videoUrl} />
-                        
-                        {/* Бутон за цял екран (само за mp4) */}
-                        {!getYouTubeId(videoUrl) && (
-                            <button 
-                                onClick={toggleFullscreen}
-                                className="absolute bottom-2 right-2 z-30 bg-black/60 text-white p-3 rounded-lg backdrop-blur-sm active:scale-95 transition-transform"
-                                aria-label="Цял екран"
-                            >
-                                <Icons.Fullscreen />
-                            </button>
-                        )}
+                    {/* Основен контейнер - в landscape става flex-row */}
+                    <div 
+                        ref={containerRef} 
+                        className={`relative bg-black rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl border-2 sm:border-4 border-white
+                            ${isLandscape ? 'flex flex-row h-[70vh]' : 'aspect-video'}`}
+                    >
+                        {/* Видео - в landscape заема 40% */}
+                        <div className={`${isLandscape ? 'w-2/5 h-full' : 'w-full h-full'}`}>
+                            <MediaPlayer key={videoUrl} ref={playerRef} url={videoUrl} />
+                            
+                            {/* Бутон за цял екран (само за mp4) */}
+                            {!getYouTubeId(videoUrl) && (
+                                <button 
+                                    onClick={toggleFullscreen}
+                                    className="absolute bottom-2 right-2 z-30 bg-black/60 text-white p-3 rounded-lg backdrop-blur-sm active:scale-95 transition-transform"
+                                    aria-label="Цял екран"
+                                >
+                                    <Icons.Fullscreen />
+                                </button>
+                            )}
+                        </div>
 
+                        {/* Активен въпрос - в landscape се показва до видеото */}
                         {activeQuestion && (
-                            <div className="absolute inset-0 z-40">
-                                {activeQuestion.type !== 'label' && (
-                                    <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto no-scrollbar">
-                                        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 max-w-full sm:max-w-xl w-full shadow-2xl animate-fade-in relative my-4">
-                                            <div className="absolute top-3 right-4 sm:top-4 sm:right-6 flex items-center gap-1 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                                                <Icons.Star className="w-4 h-4 text-yellow-500" />
-                                                {activeQuestion.points || 1} т.
-                                            </div>
-                                            <h3 className="text-lg sm:text-xl font-bold mb-5 sm:mb-6 pr-12 break-words">{activeQuestion.text}</h3>
-                                            {activeQuestion.type === 'single' && (
-                                                <div className="space-y-3">
-                                                    {activeQuestion.options.map((opt, i) => (
-                                                        <button key={i} onClick={() => submit(i === activeQuestion.correct)} className="w-full text-left p-4 rounded-xl border-2 hover:border-blue-500 transition-all font-medium flex justify-between items-center group active:bg-blue-50">
-                                                            <span className="break-words pr-2">{opt}</span>
-                                                            <div className="w-5 h-5 rounded-full border-2 border-slate-200 group-hover:border-blue-500 transition-all flex-shrink-0"></div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {activeQuestion.type === 'multiple' && (
-                                                <div className="space-y-3">
-                                                    {activeQuestion.options.map((opt, i) => (
-                                                        <button key={i} onClick={() => setSelectedOptions(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])} className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center group ${selectedOptions.includes(i) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'hover:border-blue-500'}`}>
-                                                            <span className="break-words pr-2">{opt}</span>
-                                                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 ${selectedOptions.includes(i) ? 'bg-blue-600 border-blue-600' : 'border-slate-200 group-hover:border-blue-500'}`}>{selectedOptions.includes(i) && <Icons.Check className="text-white w-3 h-3" />}</div>
-                                                        </button>
-                                                    ))}
-                                                    <button onClick={() => {
-                                                        const isCorrect = Array.isArray(activeQuestion.correct) && 
-                                                            activeQuestion.correct.length === selectedOptions.length &&
-                                                            activeQuestion.correct.every(val => selectedOptions.includes(val));
-                                                        submit(isCorrect);
-                                                    }} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors mt-2 active:bg-blue-800">Потвърди</button>
-                                                </div>
-                                            )}
-                                            {activeQuestion.type === 'text' && (
-                                                <div className="space-y-4">
-                                                    <input value={textAnswer} onChange={e => setTextAnswer(e.target.value)} className="w-full p-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all text-base" placeholder="Напишете вашия отговор..." />
-                                                    <button onClick={() => submit(textAnswer.trim().toLowerCase() === activeQuestion.correct.toLowerCase())} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors active:bg-blue-800">Изпрати отговор</button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {activeQuestion.type === 'label' && (
+                            <>
+                                {activeQuestion.type === 'label' ? (
+                                    // Специално за етикети: видеото е цяло, текстът и етикетите се пренареждат
                                     <div className="absolute inset-0 bg-slate-900/60">
                                         <div className="absolute top-3 left-1/2 transform -translate-x-1/2 bg-white/95 px-5 py-3 rounded-full shadow-lg z-50 text-center animate-fade-in w-[90%] sm:w-auto">
                                             <div className="flex items-center gap-2 justify-center mb-1">
@@ -379,10 +364,101 @@
                                             Продължи (0 т.)
                                         </button>
                                     </div>
+                                ) : (
+                                    // За всички други типове въпроси
+                                    <div className={`
+                                        ${isLandscape 
+                                            ? 'relative w-3/5 h-full overflow-y-auto bg-slate-900' 
+                                            : 'absolute inset-0 bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto no-scrollbar'
+                                        }
+                                    `}>
+                                        <div className={`
+                                            bg-white rounded-2xl sm:rounded-3xl shadow-2xl animate-fade-in
+                                            ${isLandscape 
+                                                ? 'w-full h-full rounded-none overflow-y-auto p-5' 
+                                                : 'max-w-full sm:max-w-xl w-full p-5 sm:p-8 my-4'
+                                            }
+                                        `}>
+                                            <div className="absolute top-3 right-4 sm:top-4 sm:right-6 flex items-center gap-1 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                                                <Icons.Star className="w-4 h-4 text-yellow-500" />
+                                                {activeQuestion.points || 1} т.
+                                            </div>
+                                            <h3 className="text-lg sm:text-xl font-bold mb-5 sm:mb-6 pr-12 break-words">{activeQuestion.text}</h3>
+                                            
+                                            {/* Единичен избор */}
+                                            {activeQuestion.type === 'single' && (
+                                                <div className="space-y-3">
+                                                    {activeQuestion.options.map((opt, i) => (
+                                                        <button 
+                                                            key={i} 
+                                                            onClick={() => submit(i === activeQuestion.correct)} 
+                                                            className="w-full text-left p-4 rounded-xl border-2 hover:border-blue-500 transition-all font-medium flex justify-between items-center group active:bg-blue-50"
+                                                        >
+                                                            <span className="break-words pr-2">{opt}</span>
+                                                            <div className="w-5 h-5 rounded-full border-2 border-slate-200 group-hover:border-blue-500 transition-all flex-shrink-0"></div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Множествен избор */}
+                                            {activeQuestion.type === 'multiple' && (
+                                                <div className="space-y-3">
+                                                    {activeQuestion.options.map((opt, i) => (
+                                                        <button 
+                                                            key={i} 
+                                                            onClick={() => setSelectedOptions(prev => 
+                                                                prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
+                                                            )} 
+                                                            className={`w-full text-left p-4 rounded-xl border-2 transition-all font-medium flex justify-between items-center group 
+                                                                ${selectedOptions.includes(i) ? 'border-blue-500 bg-blue-50 text-blue-700' : 'hover:border-blue-500'}`}
+                                                        >
+                                                            <span className="break-words pr-2">{opt}</span>
+                                                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 
+                                                                ${selectedOptions.includes(i) ? 'bg-blue-600 border-blue-600' : 'border-slate-200 group-hover:border-blue-500'}`}>
+                                                                {selectedOptions.includes(i) && <Icons.Check className="text-white w-3 h-3" />}
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                    <button 
+                                                        onClick={() => {
+                                                            const isCorrect = Array.isArray(activeQuestion.correct) && 
+                                                                activeQuestion.correct.length === selectedOptions.length &&
+                                                                activeQuestion.correct.every(val => selectedOptions.includes(val));
+                                                            submit(isCorrect);
+                                                        }} 
+                                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors mt-2 active:bg-blue-800"
+                                                    >
+                                                        Потвърди
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Текстов отговор */}
+                                            {activeQuestion.type === 'text' && (
+                                                <div className="space-y-4">
+                                                    <input 
+                                                        value={textAnswer} 
+                                                        onChange={e => setTextAnswer(e.target.value)} 
+                                                        className="w-full p-4 rounded-xl border-2 outline-none focus:border-blue-500 transition-all text-base" 
+                                                        placeholder="Напишете вашия отговор..." 
+                                                    />
+                                                    <button 
+                                                        onClick={() => submit(textAnswer.trim().toLowerCase() === activeQuestion.correct.toLowerCase())} 
+                                                        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors active:bg-blue-800"
+                                                    >
+                                                        Изпрати отговор
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
-                            </div>
+                            </>
                         )}
                     </div>
+
+                    {/* Прогрес и точки */}
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border text-center">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Прогрес</p>
@@ -793,6 +869,7 @@
             );
         };
 
+        // ==================== СТАРТИРАНЕ ====================
         ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
